@@ -109,8 +109,9 @@ public class AccountDaoImpl extends HibernateDaoSupport implements AccountDao {
 		if (email != null && !email.equals(""))
 			user.setEmail(email);
 		if (password != null && !password.equals("")) {
-			if (user.getPassword().equals(password) && newPassword != null
-					&& !newPassword.equals("")) {
+			if (password == null || newPassword == null || password.isEmpty() || newPassword.isEmpty()) {
+				// password is not changed.
+			} else if (user.getPassword().equals(password)) {
 				user.setPassword(newPassword);
 			} else {
 				// only when user input old password, and the password is
@@ -124,6 +125,14 @@ public class AccountDaoImpl extends HibernateDaoSupport implements AccountDao {
     public void updateUser(User user) {
         getSession().update(user);
     }
+
+	@Override
+	public List<Integer> getUserIdList(int teamId) {
+		String sql = "SELECT user_id FROM tb_corporation_and_user WHERE corporation_id = :teamId";
+		Query query = getSession().createSQLQuery(sql);
+		query.setInteger("teamId", teamId);
+		return query.list();
+	}
 
 	@SuppressWarnings("unchecked")
 	@Override

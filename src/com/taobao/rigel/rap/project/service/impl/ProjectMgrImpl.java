@@ -12,6 +12,7 @@ import com.taobao.rigel.rap.common.HTTPUtils;
 import com.taobao.rigel.rap.common.SystemConstant;
 import com.taobao.rigel.rap.organization.bo.Group;
 import com.taobao.rigel.rap.organization.dao.OrganizationDao;
+import com.taobao.rigel.rap.organization.service.OrganizationMgr;
 import com.taobao.rigel.rap.project.bo.Action;
 import com.taobao.rigel.rap.project.bo.Module;
 import com.taobao.rigel.rap.project.bo.Page;
@@ -28,6 +29,16 @@ public class ProjectMgrImpl implements ProjectMgr {
 	private OrganizationDao organizationDao;
 	private AccountMgr accountMgr;
     private WorkspaceDao workspaceDao;
+
+    public OrganizationMgr getOrganizationMgr() {
+        return organizationMgr;
+    }
+
+    public void setOrganizationMgr(OrganizationMgr organizationMgr) {
+        this.organizationMgr = organizationMgr;
+    }
+
+    private OrganizationMgr organizationMgr;
 
     public void setWorkspaceDao(WorkspaceDao workspaceDao) {
         this.workspaceDao = workspaceDao;
@@ -73,8 +84,10 @@ public class ProjectMgrImpl implements ProjectMgr {
 				pageSize);
 		for (Project p : projectList) {
 			if (user.isUserInRole("admin")
-					|| p.getUser().getId() == user.getId())
+					|| p.getUser().getId() == user.getId()) {
 				p.setIsManagable(true);
+			}
+			p.setTeamId(organizationDao.getTeamIdByProjectId(p.getId()));
 		}
 		return projectList;
 	}
@@ -278,6 +291,19 @@ public class ProjectMgrImpl implements ProjectMgr {
 		return projectDao.search(key);
 	}
 
+    @Override
+    public List<Project> search(String key, long userId) {
+        List<Project> list =  projectDao.search(key);
+        List<Project> result = new ArrayList<Project>();
+
+        for (Project p : list) {
+            if (organizationMgr.canUserAccessProject(userId, p.getId())) {
+                result.add(p);
+            }
+        }
+        return result;
+    }
+
 	@Override
 	public Action getAction(long id) {
 		return projectDao.getAction(id);
@@ -355,7 +381,17 @@ public class ProjectMgrImpl implements ProjectMgr {
         }
     }
 
-    private void updateActionCache(Action action) {
+	@Override
+	public Integer getProjectIdByActionId(int actionId) {
+		return projectDao.getProjectIdByActionId(actionId);
+	}
+
+	@Override
+	public void updateProjectNum(Project project) {
+		projectDao.updateProjectNum(project);
+	}
+
+	private void updateActionCache(Action action) {
         action.setDisableCache(0);
 		for (Parameter param : action.getResponseParameterList()) {
 			clearParameterCache(param, action);

@@ -125,12 +125,21 @@ public interface ProjectMgr {
 	List<Project> getProjectListByGroup(int id);
 
 	/**
-	 * search project
+	 * search all projects (for admin)
 	 * 
 	 * @param key
 	 * @return
 	 */
 	List<Project> search(String key);
+
+    /**
+     * search project by user
+     *
+     * @param key
+     * @param curUserId
+     * @return
+     */
+    List<Project> search(String key, long curUserId);
 
 	/**
 	 * get action
@@ -173,4 +182,15 @@ public interface ProjectMgr {
      * @param projectId
      */
     void updateCache(int projectId);
+
+	/**
+	 * get project id by action id
+	 *
+	 * @param actionId
+	 * @return
+	 */
+	Integer getProjectIdByActionId(int actionId);
+
+	void updateProjectNum(Project project);
+
 }

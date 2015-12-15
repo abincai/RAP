@@ -46,55 +46,107 @@
         }
         jQuery._rap_wrapped = true;
 
-        if (jQuery.ajaxPrefilter) {
-            jQuery.ajaxPrefilter(function(oOptions, originalOptions, jqXHR) {
-                var url = oOptions.url;
-                var routePassed = route(url) && projectId;
-                if (routePassed) {
-                    rapUrlConverterJQuery(oOptions);
-                    var oldSuccess1 = oOptions.success;
-                    oldSuccess1 && (oOptions.success = function(data) {
-                        if (PREFIX == '/mockjs/') {
-                            data = Mock.mock(data);
-                            disableLog || console.log('请求' + url + '返回的Mock数据:');
-                            disableLog || console.dir(data);
+        var ajax = jQuery.ajax;
+        jQuery.ajax = function() {
+            var oOptions = arguments[0];
 
+            // process ajax(url, options) condition
+            if (typeof arguments[0] === 'string' &&
+                typeof arguments[1] === 'object' &&
+                arguments[1].url === undefined) {
+
+                oOptions = arguments[1];
+                oOptions.url = arguments[0];
+                arguments[0] = oOptions;
+
+            } else if(typeof arguments[0] === 'string' &&
+                typeof arguments[1] === undefined) {
+                oOptions = arguments[0] = {
+                    url : arguments[0]
+                };
+            }
+
+            var url = oOptions.url;
+            var routePassed = route(url) && projectId;
+            if (routePassed) {
+                rapUrlConverterJQuery(oOptions);
+                var oldSuccess1 = oOptions.success;
+                oldSuccess1 && (oOptions.success = function(data) {
+                    if (PREFIX == '/mockjs/') {
+                        data = Mock.mock(data);
+                        if (data.__root__) {
+                            data = data.__root__;
                         }
-                        oldSuccess1.apply(this, arguments);
-                    });
-
-                    var oldComplete = oOptions.complete;
-                    oldComplete && (oOptions.complete = function(data) {
-                        if (PREFIX == '/mockjs/') {
-                            data = Mock.mock(data);
-                            disableLog || console.log('请求' + url + '返回的Mock数据:');
-                            disableLog || console.dir(data);
-
+                        if (!disableLog) {
+                            console.log('请求' + url + '返回的Mock数据:');
+                            console.dir(data);
                         }
-                        oldComplete.apply(this, arguments);
-                    });
-                } else if(isInWhiteList(url) && !oOptions.RAP_NOT_TRACK) {
-                    var checkerOptions = {url : oOptions.url};
-                    rapUrlConverterJQuery(checkerOptions);
-                    checkerOptions.RAP_NOT_TRACK = true;
-                    checkerOptions.success = checkerHandler;
-                    // real data checking
-                    var oldSuccess2 = oOptions.success;
-                    oOptions.success = function() {
-                        var realData = arguments[0];
-                        checkerOptions.context = {
-                            data : realData,
-                            url : oOptions.url
-                        };
-                        // perform real data check
-                        jQuery.ajax(checkerOptions);
-                        oldSuccess2.apply(this,arguments);
+
+                    }
+                    oldSuccess1.apply(this, arguments);
+                });
+
+                var oldComplete = oOptions.complete;
+                oldComplete && (oOptions.complete = function(data) {
+                    if (PREFIX == '/mockjs/') {
+                        data = Mock.mock(data);
+                        if (data.__root__) {
+                            data = data.__root__;
+                        }
+                        if (!disableLog) {
+                            console.log('请求' + url + '返回的Mock数据:');
+                            console.dir(data);
+                        }
+
+                    }
+                    oldComplete.apply(this, arguments);
+                });
+            } else if(isInWhiteList(url) && !oOptions.RAP_NOT_TRACK) {
+                var checkerOptions = {url : oOptions.url};
+                rapUrlConverterJQuery(checkerOptions);
+                checkerOptions.RAP_NOT_TRACK = true;
+                checkerOptions.success = checkerHandler;
+                // real data checking
+                var oldSuccess2 = oOptions.success;
+                oOptions.success = function() {
+                    var realData = arguments[0];
+                    checkerOptions.context = {
+                        data : realData,
+                        url : oOptions.url
                     };
-                }
-            });
-        } else {
-            throw new Error('Can not find jQuery.ajaxPrefilter method!');
-        }
+                    // perform real data check
+                    ajax.apply(jQuery, [checkerOptions]);
+                    oldSuccess2.apply(this,arguments);
+                };
+            }
+            var rv = ajax.apply(this, arguments);
+            if (routePassed) {
+                var oldDone = rv.done;
+                oldDone && (rv.done = function(data) {
+                    var oldCb = arguments[0];
+                    var args = arguments;
+                    if (oldCb) {
+                        args[0] = function(data) {
+                            if (PREFIX == '/mockjs/') {
+                                data = Mock.mock(data);
+                                if (data.__root__) {
+                                    data = data.__root__;
+                                }
+                                if (!disableLog) {
+                                    console.log('请求' + url + '返回的Mock数据:');
+                                    console.dir(data);
+                                }
+                            }
+                            oldCb.apply(this, arguments);
+                        };
+                    }
+                    oldDone.apply(this, args);
+                });
+            }
+
+
+            return rv;
+        };
     }
 
     window.wrapJQueryForRAP = wrapJQuery;
@@ -129,8 +181,13 @@
                             oldSuccess1 && (oOptions.success = function(data) {
                                 if (PREFIX == '/mockjs/') {
                                     data = Mock.mock(data);
-                                    disableLog || console.log('请求' + url + '返回的Mock数据:');
-                                    disableLog || console.dir(data);
+                                    if (data.__root__) {
+                                        data = data.__root__;
+                                    }
+                                    if (!disableLog) {
+                                        console.log('请求' + url + '返回的Mock数据:');
+                                        console.dir(data);
+                                    }
                                 }
                                 oldSuccess1.apply(this, arguments);
                             });
@@ -138,8 +195,13 @@
                             oldComplete && (oOptions.complete = function(data) {
                                 if (PREFIX == '/mockjs/') {
                                     data = Mock.mock(data);
-                                    disableLog || console.log('请求' + url + '返回的Mock数据:');
-                                    disableLog || console.dir(data);
+                                    if (data.__root__) {
+                                        data = data.__root__;
+                                    }
+                                    if (!disableLog) {
+                                        console.log('请求' + url + '返回的Mock数据:');
+                                        console.dir(data);
+                                    }
 
                                 }
                                 oldComplete.apply(this, arguments);
@@ -261,6 +323,9 @@
     function checkerHandler(mockData) {
         if (PREFIX == '/mockjs/') {
             mockData = Mock.mock(mockData);
+            if (mockData.__root__) {
+                mockData = mockData.__root__;
+            }
         }
         var realData = this.data;
         var validator = new StructureValidator(realData, mockData);
@@ -288,8 +353,8 @@
 
         console.info(log.join('\n'));
         if (error === true) {
-            disableLog || console.log('真实数据:');
-            disableLog || console.dir(this.data);
+            console.log('真实数据:');
+            console.dir(this.data);
         }
     }
 

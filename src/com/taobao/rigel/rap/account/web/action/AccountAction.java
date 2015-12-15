@@ -10,10 +10,9 @@ import javax.mail.internet.AddressException;
 import com.google.gson.Gson;
 import com.taobao.rigel.rap.account.bo.Notification;
 import com.taobao.rigel.rap.account.bo.User;
-import com.taobao.rigel.rap.common.ActionBase;
-import com.taobao.rigel.rap.common.ContextManager;
-import com.taobao.rigel.rap.common.Pinyin4jUtil;
-import com.taobao.rigel.rap.common.SystemVisitorLog;
+import com.taobao.rigel.rap.common.*;
+import com.taobao.rigel.rap.organization.bo.Corporation;
+import com.taobao.rigel.rap.organization.service.OrganizationMgr;
 
 /**
  * account action
@@ -33,6 +32,26 @@ public class AccountAction extends ActionBase {
 	private String email;
 	private String SSO_TOKEN;
 	private String BACK_URL;
+
+    public OrganizationMgr getOrganizationMgr() {
+        return organizationMgr;
+    }
+
+    public void setOrganizationMgr(OrganizationMgr organizationMgr) {
+        this.organizationMgr = organizationMgr;
+    }
+
+    private OrganizationMgr organizationMgr;
+
+	public int getId() {
+		return id;
+	}
+
+	public void setId(int id) {
+		this.id = id;
+	}
+
+	private int id;
 
 	public String test() throws AddressException, InterruptedException {
 
@@ -129,8 +148,23 @@ public class AccountAction extends ActionBase {
 	}
 
 	public String all() {
+        if (!isUserLogined()) {
+            plsLogin();
+            return JSON_ERROR;
+        }
+        if (id > 0) {
+            Corporation c = organizationMgr.getCorporation(id);
+            if (c.getAccessType() == Corporation.PUBLIC_ACCESS) {
+                id = 0; // public access
+            }
+        }
+        if (id > 0 && !organizationMgr.canUserManageCorp(getCurUserId(), id)) {
+            setErrMsg(ACCESS_DENY);
+            return JSON_ERROR;
+        }
 		Gson gson = new Gson();
-		List<User> users = super.getAccountMgr().getUserList();
+
+		List<User> users = id > 0 ? super.getAccountMgr().getUserList(id) : super.getAccountMgr().getUserList();
 		List<Map<String, Object>> result = new ArrayList<Map<String, Object>>();
 		for (User user : users) {
 			Map<String, Object> o = new HashMap<String, Object>();
@@ -271,17 +305,34 @@ public class AccountAction extends ActionBase {
 		return SUCCESS;
 	}
 
-	// public String register() {
-	// doLogout();
-	// return SUCCESS;
-	// }
+    public String register() {
+        doLogout();
+        return SUCCESS;
+    }
 
 	public String doRegister() {
+        if (!StringUtils.validateName(getName())) {
+            setErrMsg(StringUtils.NAME_FORMAT_WARN_MSG);
+            return ERROR;
+        }
+
+        if (!StringUtils.validateAccount(getAccount())) {
+            setErrMsg(StringUtils.ACCOUNT_FORMAT_WARN_MSG);
+            return ERROR;
+        }
+
 		User user = new User();
 		user.setAccount(getAccount());
 		user.setPassword(getPassword());
 		user.setName(getName());
 		user.setEmail(getEmail());
+
+        String validateMsg = getAccountMgr().validatePasswordFormat(getPassword());
+        if (validateMsg != null) {
+            setErrMsg(validateMsg);
+            return ERROR;
+        }
+
 		if (super.getAccountMgr().addUser(user)) {
 			return doLogin();
 		} else {
@@ -314,14 +365,51 @@ public class AccountAction extends ActionBase {
 		return SUCCESS;
 	}
 
-	/**
-	 * public String updateProfile() { setIsEditMode(true); return SUCCESS; }
-	 * 
-	 * public String doUpdateProfile() { if
-	 * (!super.getAccountMgr().updateProfile(getCurUserId(), getName(),
-	 * getEmail(), getPassword(), getNewPassword())) { setIsEditMode(true);
-	 * setErrMsg("旧密码输入错误"); } return SUCCESS; }
-	 */
+
+    public String updateProfile() {
+
+        if (!isUserLogined()) {
+            plsLogin();
+            setRelativeReturnUrl("/account/updateProfile.do");
+            return LOGIN;
+        }
+
+        setIsEditMode(true);
+        return SUCCESS;
+    }
+
+    public String doUpdateProfile() {
+        if (!isUserLogined()) {
+            plsLogin();
+            setRelativeReturnUrl("/account/updateProfile.do");
+            return LOGIN;
+        }
+
+        if (!StringUtils.validateName(getName())) {
+            setIsEditMode(true);
+            setErrMsg(StringUtils.NAME_FORMAT_WARN_MSG);
+            return SUCCESS;
+        }
+
+		if (getNewPassword() != null && !getNewPassword().isEmpty()) {
+			String validateMsg = getAccountMgr().validatePasswordFormat(getNewPassword());
+			if (validateMsg != null) {
+				setIsEditMode(true);
+				setErrMsg(validateMsg);
+				return SUCCESS;
+			}
+		}
+
+        if(!super.getAccountMgr().updateProfile(getCurUserId(), getName(),
+                getEmail(), getPassword(), getNewPassword())) {
+            setIsEditMode(true);
+            setErrMsg("旧密码输入错误");
+        } else {
+            setIsOpSuccess(true);
+        }
+
+        return SUCCESS;
+    }
 
 	public String sendBucSSOToken() {
 		return SUCCESS;

@@ -118,7 +118,7 @@ public interface ProjectDao {
 	List<Project> getProjectListByGroup(int id);
 
 	/**
-	 * project search
+	 * search all projects (for admin use)
 	 * 
 	 * @param key
 	 * @return
@@ -142,4 +142,23 @@ public interface ProjectDao {
     long getMockNumInTotal();
 
     List<Project> selectMockNumTopNProjectList(int limit);
+
+	/**
+	 * get project id by action id
+     *
+	 * @param actionId
+	 * @return
+	 */
+	Integer getProjectIdByActionId(int actionId);
+
+	void updateProjectNum(Project project);
+
+
+    /**
+     * transfer a project to another user
+     *
+     * @param projectId
+     * @param creatorId
+     */
+    void updateCreatorId(int projectId, long creatorId);
 }

@@ -9,6 +9,7 @@ import java.util.concurrent.FutureTask;
 
 import com.google.gson.Gson;
 import com.taobao.rigel.rap.common.SystemConstant;
+import com.taobao.rigel.rap.organization.service.OrganizationMgr;
 import org.apache.velocity.Template;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.VelocityEngine;
@@ -32,6 +33,16 @@ import com.taobao.rigel.rap.workspace.service.WorkspaceMgr;
 public class WorkspaceAction extends ActionBase {
 
 	private static final long serialVersionUID = 1L;
+
+    public OrganizationMgr getOrganizationMgr() {
+        return organizationMgr;
+    }
+
+    public void setOrganizationMgr(OrganizationMgr organizationMgr) {
+        this.organizationMgr = organizationMgr;
+    }
+
+    private OrganizationMgr organizationMgr;
 	
 	private boolean accessable;
 
@@ -261,6 +272,11 @@ public class WorkspaceAction extends ActionBase {
             logger.error("Unexpected project id=%d", getProjectId());
             return ERROR;
         }
+        if (!organizationMgr.canUserAccessProject(getCurUserId(), getProjectId())) {
+            setErrMsg(ACCESS_DENY);
+            return ERROR;
+        }
+
 		Workspace workspace = new Workspace();
 		workspace.setProject(p);
 		setWorkspaceJsonString(workspace.toString());
@@ -386,14 +402,12 @@ public class WorkspaceAction extends ActionBase {
 		User curUser = getCurUser();
 		if (curUser == null) {
 			setErrMsg(LOGIN_WARN_MSG);
-			setIsOk(false);
             logger.error("Unlogined user trying to checkin and failed.");
 			return JSON_ERROR;
 		}
 
 		if (!getAccountMgr().canUserManageProject(getCurUserId(), getId())) {
 			setErrMsg("access deny");
-			setIsOk(false);
             logger.error("User %s trying to checkedin project(id=$d) and denied.", getCurAccount(), getId());
 			return JSON_ERROR;
 		}

@@ -1,10 +1,14 @@
 package com.taobao.rigel.rap.common;
 
+import org.springmodules.cache.regex.Regex;
+
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -448,6 +452,46 @@ public class StringUtils {
 		return false;
 	}
 
+    /**
+     * 中文算2个，字母算1个
+     *
+     * @param str
+     * @return
+     */
+    public static int getLengthOfStringChinese(String str) {
+        int length = 0;
+        for (char c : str.toCharArray()) {
+            if (isChinese(c)) length += 2;
+            else length ++;
+        }
+        return length;
+    }
+
+    /**
+     * 中文算2个，字母算1个
+     *
+     * @param str
+     * @param startIndex
+     * @param endIndex
+     * @return
+     */
+    public static String subStringChinese(String str, int startIndex, int endIndex) {
+        int length = 0;
+        int size = endIndex - startIndex;
+        List<Character> charList = new ArrayList<Character>();
+        for (char c : str.toCharArray()) {
+            if (isChinese(c)) length += 2;
+            else length ++;
+            charList.add(c);
+            if (length >= size) break;
+        }
+        StringBuilder builder = new StringBuilder();
+        for (Character c : charList) {
+            builder.append(c);
+        }
+        return builder.toString();
+    }
+
 	/**
 	 * regular expression matcher helper
 	 * 
@@ -463,4 +507,43 @@ public class StringUtils {
 		return matcher.matches();
 	}
 
+    /**
+     * remove all characters except [0-9a-zA-Z_] and blank space
+     *
+     * @param o
+     * @return
+     */
+    public static String removeIllegalCharacters(String o) {
+        return o.replaceAll(Patterns.ILLEGAL_NAME_CHAR, "");
+    }
+
+
+    public static boolean validateAccount(String str) {
+        if (str == null) return false;
+        if (str.length() < SystemConstant.ACCOUNT_LENGTH_MIN || str.length() > SystemConstant.ACCOUNT_LENGTH_MAX) {
+            return false;
+        }
+        return str.matches(Patterns.LEGAL_ACCOUNT_CHAR + "*");
+    }
+
+    public static boolean validateName(String str) {
+        if (str == null) return false;
+        if (str.length() < SystemConstant.NAME_LENGTH_MIN || str.length() > SystemConstant.NAME_LENGTH_MAX) {
+            return false;
+        }
+
+        for (int i = 0; i < str.length(); i++) {
+            char c = str.charAt(i);
+            if (!isChinese(c) && !String.valueOf(c).matches(Patterns.LEGAL_NAME_CHAR)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+
+    public static final String NAME_FORMAT_WARN_MSG = "名字必须由数字/字母/汉子/空格/下划线组成,长度" + SystemConstant.NAME_LENGTH_MIN + "-" + SystemConstant.NAME_LENGTH_MAX + ".";
+
+    public static final String ACCOUNT_FORMAT_WARN_MSG = "账户必须由数字/字母/下划线组成,长度" + SystemConstant.ACCOUNT_LENGTH_MIN + "-" + SystemConstant.ACCOUNT_LENGTH_MAX + ".";
 }

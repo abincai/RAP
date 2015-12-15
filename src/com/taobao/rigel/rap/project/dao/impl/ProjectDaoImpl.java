@@ -380,10 +380,7 @@ public class ProjectDaoImpl extends HibernateDaoSupport implements ProjectDao {
 		List<Action> result = new ArrayList<Action>();
 		for (Action action : list) {
 			String url = action.getRequestUrl();
-			if (url != null && !url.isEmpty() && url.charAt(0) != '/'
-					&& !url.startsWith("reg:")) {
-				url = "/" + url;
-			}
+			url = URLUtils.getRelativeUrl(url);
 			if (url.startsWith("reg:")) { // regular pattern
 				if (StringUtils.regMatch(url.substring(4), pattern)) {
 					result.add(action);
@@ -504,7 +501,6 @@ public class ProjectDaoImpl extends HibernateDaoSupport implements ProjectDao {
 		return query.list();
 	}
 
-	@SuppressWarnings("unchecked")
 	@Override
 	public List<Project> search(String key) {
 		String hql = "from Project where name LIKE :key";
@@ -543,6 +539,33 @@ public class ProjectDaoImpl extends HibernateDaoSupport implements ProjectDao {
         String hqlByUser = "from Project order by mockNum desc";
         Query query = getSession().createQuery(hqlByUser);
         return query.setMaxResults(limit).list();
+    }
+
+	@Override
+	public Integer getProjectIdByActionId(int actionId) {
+		StringBuilder sql = new StringBuilder();
+		sql.append("SELECT p.id FROM tb_project p ");
+		sql.append("JOIN tb_module m ON m.project_id = p.id ");
+		sql.append("JOIN tb_page page ON page.module_id = m.id ");
+		sql.append("JOIN tb_action_and_page anp ON anp.page_id = page.id ");
+		sql.append("where action_id = :actionId");
+		Query query = getSession().createSQLQuery(sql.toString());
+		query.setInteger("actionId", actionId);
+		return (Integer)query.uniqueResult();
+	}
+
+	@Override
+	public void updateProjectNum(Project project) {
+		String sql = "UPDATE tb_project SET mock_num = :mockNum WHERE id = :projectId";
+		getSession().createSQLQuery(sql).setInteger("mockNum", project.getMockNum()).setInteger("projectId", project.getId()).executeUpdate();
+	}
+
+    @Override
+    public void updateCreatorId(int projectId, long creatorId) {
+        Query query = getSession().createSQLQuery("UPDATE tb_project SET user_id = :userId WHERE id = :id");
+        query.setLong("userId", creatorId);
+        query.setInteger("id", projectId);
+        query.executeUpdate();
     }
 
 }

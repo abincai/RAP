@@ -65,6 +65,14 @@ public class GroupAction extends ActionBase {
 	}
 
 	public String all() {
+		if (!isUserLogined()) {
+			plsLogin();
+			return JSON_ERROR;
+		}
+		if (!organizationMgr.canUserAccessProductionLine(getCurUserId(), productLineId)) {
+			setErrMsg(ACCESS_DENY);
+			return JSON_ERROR;
+		}
 		Gson gson = new Gson();
 		Map<String, Object> result = new HashMap<String, Object>();
 		List<Map<String, Object>> groups = new ArrayList<Map<String, Object>>();
@@ -90,6 +98,7 @@ public class GroupAction extends ActionBase {
 				project.put("accounts", projectModel.getMemberAccountListStr());
 				project.put("isManagable", projectModel.getIsManagable());
 				project.put("creator", projectModel.getUser().getUserBaseInfo());
+				project.put("teamId", projectModel.getTeamId());
 				projects.add(project);
 			}
 			group.put("projects", projects);
@@ -103,6 +112,14 @@ public class GroupAction extends ActionBase {
 	}
 
 	public String groups() {
+		if (!isUserLogined()) {
+			plsLogin();
+			return JSON_ERROR;
+		}
+		if (!organizationMgr.canUserAccessProductionLine(getCurUserId(), productLineId)) {
+			setErrMsg(ACCESS_DENY);
+			return JSON_ERROR;
+		}
 		Gson gson = new Gson();
 		Map<String, Object> result = new HashMap<String, Object>();
 		List<Map<String, Object>> groups = new ArrayList<Map<String, Object>>();
@@ -121,6 +138,14 @@ public class GroupAction extends ActionBase {
 	}
 
 	public String create() {
+		if (!isUserLogined()) {
+			plsLogin();
+			return JSON_ERROR;
+		}
+		if (!organizationMgr.canUserManageProductionLine(getCurUserId(), productLineId)) {
+			setErrMsg(ACCESS_DENY);
+			return JSON_ERROR;
+		}
 		Gson gson = new Gson();
 		Group group = new Group();
 		group.setName(name);
@@ -135,12 +160,28 @@ public class GroupAction extends ActionBase {
 	}
 
 	public String delete() {
+		if (!isUserLogined()) {
+			plsLogin();
+			return JSON_ERROR;
+		}
+		if (!organizationMgr.canUserManageGroup(getCurUserId(), id)) {
+			setErrMsg(ACCESS_DENY);
+			return JSON_ERROR;
+		}
 		RapError error = organizationMgr.removeGroup(id);
 		setJson(error.toString());
 		return SUCCESS;
 	}
 
 	public String update() {
+		if (!isUserLogined()) {
+			plsLogin();
+			return JSON_ERROR;
+		}
+		if (!organizationMgr.canUserManageGroup(getCurUserId(), id)) {
+			setErrMsg(ACCESS_DENY);
+			return JSON_ERROR;
+		}
 		Group group = new Group();
 		group.setId(id);
 		group.setName(name);

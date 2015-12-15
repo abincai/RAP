@@ -17,14 +17,33 @@ public class ActionBase extends ActionSupport {
 
 	public static String LOGIN_WARN_MSG = "您登录过期啦，不要乱动哦，请打开新页面登录后再提交吧 >  。<";
 
+	public static String LOGIN_HINT_MSG = "您尚未登录，或登录已过期，请登录后再试。";
+
+    public static String ACCESS_DENY = "您无权访问该页面或数据，请联系系统管理员。";
+
+	public boolean isOpSuccess() {
+		return isOpSuccess;
+	}
+
+	public void setIsOpSuccess(boolean isOpSuccess) {
+		this.isOpSuccess = isOpSuccess;
+	}
+
+	private boolean isOpSuccess = false;
+
+
 	private boolean isReturnUrlFirstSet;
 
 	private boolean isLoginCtlHidden;
 	private int num;
 
 	public List<Corporation> getCorpList() {
-		return accountMgr.getCorporationList();
+		return accountMgr.getCorporationListWithPager(getCurUserId(), 1, 20);
 	}
+
+    public List<Corporation> getAllCorpList() {
+        return accountMgr.getCorporationListWithPager(getCurUserId(), 1, 120);
+    }
 
 	public int getNum() {
 		return num;
@@ -52,38 +71,9 @@ public class ActionBase extends ActionSupport {
 		this.returnUrl = returnUrl;
 	}
 
-	private Pager pager;
-
-	public Pager getPager() {
-		return pager;
-	}
-
-	public void setPager(Pager pager) {
-		this.pager = pager;
-	}
-
     public Long getServerTime() {
         return new Date().getTime();
     }
-
-    /**
-     * void setter for cache aprams
-     * @param seed
-     */
-    public void setSeed(int seed) {
-    }
-
-	protected void initPager() {
-		if (getPager() == null) {
-			setPager(new Pager());
-		}
-		if (getPager().getCurPagerNum() == 0) {
-			getPager().setCurPagerNum(SystemConstant.FIRST_PAGE_NUM);
-		}
-		if (getPager().getPagerSize() == 0) {
-			getPager().setPagerSize(SystemConstant.DEFAULT_PAGE_NUM);
-		}
-	}
 
 	private AccountMgr accountMgr;
 
@@ -99,18 +89,6 @@ public class ActionBase extends ActionSupport {
 		return isUserLogined() ? ContextManager.getSession()
 				.get(ContextManager.KEY_ACCOUNT).toString() : null;
 	}
-	
-	public String getCurCorpName() {
-		Object nameObj = ContextManager.getSession().get(ContextManager.KEY_CORP_NAME);
-		String name = null;
-		if (nameObj != null) {
-			name = nameObj.toString();
-		}
-		if (name == null || name.isEmpty()) {
-			return "团队";
-		}
-		return name;
-	}
 
 	public boolean getIsLogined() {
 		return isUserLogined();
@@ -120,7 +98,6 @@ public class ActionBase extends ActionSupport {
 		return ContextManager.getSession().get(ContextManager.KEY_ACCOUNT) != null;
 	}
 
-	@SuppressWarnings("rawtypes")
 	public int getCountOfOnlineUserList() {
 		Map app = ContextManager.getApplication();
 		String key = ContextManager.KEY_COUNT_OF_ONLINE_USER_LIST;
@@ -191,10 +168,11 @@ public class ActionBase extends ActionSupport {
 	public void setErrMsg(String errMsg) {
 		this.isLoginCtlHidden = true;
 		this.errMsg = errMsg;
+        this.isOk = false;
 	}
 
 	public void plsLogin() {
-		setErrMsg("请先登录");
+		setErrMsg(LOGIN_HINT_MSG);
 	}
 
 }
